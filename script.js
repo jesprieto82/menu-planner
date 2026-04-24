@@ -371,8 +371,22 @@ async function resetWeek() {
         currentTemplateId = null;
         updateTemplateUI();
         await saveState('weekly_menu', state.weeklyMenu);
+        await saveState('active_template_id', null);
         renderWeek();
     }
+}
+
+function isMenuEmpty(menu) {
+    if (!menu || Object.keys(menu).length === 0) return true;
+    for (const key in menu) {
+        const val = menu[key];
+        if (typeof val === 'object' && val !== null) {
+            if (val.first !== null || val.second !== null) return false;
+        } else if (val !== null) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // Data Persistence
@@ -388,13 +402,25 @@ async function loadInitialData() {
     if (globalState) {
         const menu = globalState.find(s => s.key === 'weekly_menu');
         const inventory = globalState.find(s => s.key === 'inventory');
+        const activeTemplate = globalState.find(s => s.key === 'active_template_id');
+        
         if (menu) state.weeklyMenu = menu.value;
         if (inventory) state.inventory = inventory.value;
+        if (activeTemplate) currentTemplateId = activeTemplate.value;
     }
 
     // Fetch templates
     const { data: templates } = await _supabase.from('gp_templates').select('*').order('name');
     state.templates = templates || [];
+
+    // Load default template if current plan is empty and templates exist
+    if (isMenuEmpty(state.weeklyMenu) && state.templates.length > 0) {
+        const defaultTemplate = state.templates[0];
+        state.weeklyMenu = defaultTemplate.data;
+        currentTemplateId = defaultTemplate.id;
+        await saveState('weekly_menu', state.weeklyMenu);
+        await saveState('active_template_id', currentTemplateId);
+    }
 
     renderWeek();
     renderDishes();
@@ -445,7 +471,10 @@ async function saveAsTemplate() {
     if (error) {
         alert('Error: ' + error.message);
     } else {
-        if (data && data[0]) currentTemplateId = data[0].id;
+        if (data && data[0]) {
+            currentTemplateId = data[0].id;
+            await saveState('active_template_id', currentTemplateId);
+        }
         showSync('Plantilla guardada');
     }
 }
@@ -491,6 +520,7 @@ async function loadTemplate(id) {
         state.weeklyMenu = template.data;
         currentTemplateId = id;
         await saveState('weekly_menu', state.weeklyMenu);
+        await saveState('active_template_id', currentTemplateId);
         renderWeek();
         renderShoppingList();
         updateTemplateUI();
