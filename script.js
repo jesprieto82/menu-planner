@@ -367,11 +367,21 @@ function generateShoppingList() {
 
 async function resetWeek() {
     if (confirm('¿Estás seguro de que quieres limpiar el menú de toda la semana?')) {
-        state.weeklyMenu = {};
-        currentTemplateId = null;
+        if (state.templates.length > 0) {
+            // Instead of empty, revert to the first template as the new default baseline
+            const defaultTemplate = state.templates[0];
+            state.weeklyMenu = defaultTemplate.data;
+            currentTemplateId = defaultTemplate.id;
+            await saveState('weekly_menu', state.weeklyMenu);
+            await saveState('active_template_id', currentTemplateId);
+            showSync('Reestablecido al plan por defecto');
+        } else {
+            state.weeklyMenu = {};
+            currentTemplateId = null;
+            await saveState('weekly_menu', state.weeklyMenu);
+            await saveState('active_template_id', null);
+        }
         updateTemplateUI();
-        await saveState('weekly_menu', state.weeklyMenu);
-        await saveState('active_template_id', null);
         renderWeek();
     }
 }
@@ -413,8 +423,8 @@ async function loadInitialData() {
     const { data: templates } = await _supabase.from('gp_templates').select('*').order('name');
     state.templates = templates || [];
 
-    // Load default template if current plan is empty and templates exist
-    if (isMenuEmpty(state.weeklyMenu) && state.templates.length > 0) {
+    // Force load a template if none is active and templates exist
+    if (!currentTemplateId && state.templates.length > 0) {
         const defaultTemplate = state.templates[0];
         state.weeklyMenu = defaultTemplate.data;
         currentTemplateId = defaultTemplate.id;
@@ -445,16 +455,23 @@ function renderTemplates() {
 }
 
 function updateTemplateUI() {
-    const label = document.getElementById('activePlanLabel');
+    const subLabel = document.getElementById('activePlanSub');
     const actions = document.getElementById('templateActions');
-    if (!label || !actions) return;
+    const select = document.getElementById('templateSelect');
+    if (!subLabel || !actions || !select) return;
 
     if (currentTemplateId) {
-        label.style.display = 'block';
-        actions.style.display = 'flex';
+        const template = state.templates.find(t => t.id == currentTemplateId);
+        if (template) {
+            subLabel.innerText = `Plan: ${template.name}`;
+            subLabel.style.display = 'block';
+            actions.style.display = 'flex';
+            select.value = currentTemplateId;
+        }
     } else {
-        label.style.display = 'none';
+        subLabel.style.display = 'none';
         actions.style.display = 'none';
+        select.value = "";
     }
 }
 
