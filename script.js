@@ -11,6 +11,8 @@ let state = {
     settings: JSON.parse(localStorage.getItem('gp_settings')) || { clientId: '', apiKey: '' }
 };
 
+let editingDishId = null;
+
 // UI Feedback
 function showSync(text, duration = 2000) {
     const indicator = document.getElementById('syncIndicator');
@@ -137,6 +139,7 @@ async function selectDish(dishId) {
     
     await saveState('weekly_menu', state.weeklyMenu);
     renderWeek();
+    renderShoppingList(); // Update shopping list if dish changed
     closeSelectModal();
 }
 
@@ -159,6 +162,7 @@ function renderDishes() {
                 <h3>${dish.name}</h3>
                 <p class="dish-ingredients-count">${dish.ingredients.length} ingredientes</p>
                 <div style="margin-top: 1rem; display: flex; gap: 10px;">
+                    <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="editDish(${dish.id})">Editar</button>
                     <button class="btn" style="padding: 4px 8px; font-size: 0.8rem; background: var(--glass-bg);" onclick="deleteDish(${dish.id})">Eliminar</button>
                 </div>
             </div>
@@ -167,33 +171,67 @@ function renderDishes() {
     });
 }
 
-function openDishModal() {
+function openDishModal(isEdit = false) {
+    editingDishId = isEdit ? editingDishId : null;
+    document.getElementById('modalTitle').innerText = isEdit ? 'Editar Plato' : 'Nuevo Plato';
     document.getElementById('dishModal').style.display = 'flex';
-    document.getElementById('ingredientInputs').innerHTML = `
-        <div class="ingredient-row" style="display: flex; gap: 5px; margin-bottom: 5px;">
-            <input type="text" placeholder="Ingrediente" class="ing-name" required>
-            <input type="text" placeholder="Cant." style="width: 80px;" class="ing-qty">
-            <input type="text" placeholder="Ud." style="width: 60px;" class="ing-unit">
-        </div>
-    `;
+    
+    if (!isEdit) {
+        document.getElementById('dishName').value = '';
+        document.getElementById('ingredientInputs').innerHTML = '';
+        addIngredientRow();
+    }
 }
 
 function closeDishModal() {
     document.getElementById('dishModal').style.display = 'none';
+    editingDishId = null;
 }
 
-function addIngredientRow() {
+function addIngredientRow(name = '', qty = '', unit = '') {
     const row = document.createElement('div');
     row.className = 'ingredient-row';
     row.style.display = 'flex';
     row.style.gap = '5px';
     row.style.marginBottom = '5px';
     row.innerHTML = `
-        <input type="text" placeholder="Ingrediente" class="ing-name" required>
-        <input type="text" placeholder="Cant." style="width: 80px;" class="ing-qty">
-        <input type="text" placeholder="Ud." style="width: 60px;" class="ing-unit">
+        <input type="text" placeholder="Ingrediente" class="ing-name" value="${name}" required>
+        <input type="text" placeholder="Cant." style="width: 80px;" class="ing-qty" value="${qty}">
+        <input type="text" placeholder="Ud." style="width: 60px;" class="ing-unit" value="${unit}">
+        <button type="button" class="btn-danger-icon" onclick="removeIngredientRow(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"></path></svg>
+        </button>
     `;
     document.getElementById('ingredientInputs').appendChild(row);
+}
+
+function removeIngredientRow(btn) {
+    const row = btn.closest('.ingredient-row');
+    const allRows = document.querySelectorAll('.ingredient-row');
+    if (allRows.length > 1) {
+        row.remove();
+    } else {
+        // Clear instead of remove if it's the last one
+        row.querySelectorAll('input').forEach(i => i.value = '');
+    }
+}
+
+async function editDish(id) {
+    const dish = state.dishes.find(d => d.id === id);
+    if (!dish) return;
+
+    editingDishId = id;
+    openDishModal(true);
+    
+    document.getElementById('dishName').value = dish.name;
+    const container = document.getElementById('ingredientInputs');
+    container.innerHTML = '';
+    
+    if (dish.ingredients.length > 0) {
+        dish.ingredients.forEach(ing => addIngredientRow(ing.name, ing.qty, ing.unit));
+    } else {
+        addIngredientRow();
+    }
 }
 
 document.getElementById('dishForm').onsubmit = async (e) => {
@@ -209,20 +247,32 @@ document.getElementById('dishForm').onsubmit = async (e) => {
         if (iName) ingredients.push({ name: iName, qty: iQty, unit: iUnit });
     });
 
-    const newDish = {
-        name,
-        ingredients
-    };
+    const dishData = { name, ingredients };
 
-    showSync('Guardando plato...');
-    const { error } = await _supabase.from('gp_dishes').insert([newDish]);
+    showSync('Guardando...');
+    let error;
+
+    if (editingDishId) {
+        const { error: err } = await _supabase.from('gp_dishes').update(dishData).eq('id', editingDishId);
+        error = err;
+    } else {
+        const { error: err } = await _supabase.from('gp_dishes').insert([dishData]);
+        error = err;
+    }
     
     if (error) {
-        alert('Error al guardar el plato: ' + error.message);
+        alert('Error al guardar: ' + error.message);
     } else {
         closeDishModal();
         e.target.reset();
-        showSync('Plato guardado');
+        showSync('Guardado correctamente');
+        
+        // Instant local update (the Realtime listener will also trigger, but this ensures immediate feel)
+        const { data } = await _supabase.from('gp_dishes').select('*').order('name');
+        state.dishes = data || [];
+        renderDishes();
+        renderWeek();
+        renderShoppingList();
     }
 };
 
@@ -230,8 +280,16 @@ async function deleteDish(id) {
     if (confirm('¿Seguro que quieres eliminar este plato? Se quitará de todos los menús donde esté asignado.')) {
         showSync('Eliminando...');
         const { error } = await _supabase.from('gp_dishes').delete().eq('id', id);
-        if (error) alert('Error: ' + error.message);
-        showSync('Eliminado');
+        if (error) {
+            alert('Error: ' + error.message);
+        } else {
+            showSync('Eliminado');
+            const { data } = await _supabase.from('gp_dishes').select('*').order('name');
+            state.dishes = data || [];
+            renderDishes();
+            renderWeek();
+            renderShoppingList();
+        }
     }
 }
 
