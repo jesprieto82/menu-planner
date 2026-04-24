@@ -13,6 +13,7 @@ let state = {
 };
 
 let editingDishId = null;
+let currentTemplateId = null;
 
 // UI Feedback
 function showSync(text, duration = 2000) {
@@ -367,6 +368,8 @@ function generateShoppingList() {
 async function resetWeek() {
     if (confirm('¿Estás seguro de que quieres limpiar el menú de toda la semana?')) {
         state.weeklyMenu = {};
+        currentTemplateId = null;
+        updateTemplateUI();
         await saveState('weekly_menu', state.weeklyMenu);
         renderWeek();
     }
@@ -409,8 +412,24 @@ function renderTemplates() {
         const opt = document.createElement('option');
         opt.value = t.id;
         opt.innerText = t.name;
+        if (currentTemplateId == t.id) opt.selected = true;
         select.appendChild(opt);
     });
+    updateTemplateUI();
+}
+
+function updateTemplateUI() {
+    const label = document.getElementById('activePlanLabel');
+    const actions = document.getElementById('templateActions');
+    if (!label || !actions) return;
+
+    if (currentTemplateId) {
+        label.style.display = 'block';
+        actions.style.display = 'flex';
+    } else {
+        label.style.display = 'none';
+        actions.style.display = 'none';
+    }
 }
 
 async function saveAsTemplate() {
@@ -418,13 +437,50 @@ async function saveAsTemplate() {
     if (!name) return;
 
     showSync('Guardando plantilla...');
-    const { error } = await _supabase.from('gp_templates').insert([{
+    const { data, error } = await _supabase.from('gp_templates').insert([{
         name: name,
         data: state.weeklyMenu
-    }]);
+    }]).select();
 
-    if (error) alert('Error: ' + error.message);
-    else showSync('Plantilla guardada');
+    if (error) {
+        alert('Error: ' + error.message);
+    } else {
+        if (data && data[0]) currentTemplateId = data[0].id;
+        showSync('Plantilla guardada');
+    }
+}
+
+async function updateTemplate() {
+    if (!currentTemplateId) return;
+    const template = state.templates.find(t => t.id == currentTemplateId);
+    
+    if (confirm(`¿Quieres actualizar la plantilla "${template.name}" con los cambios actuales?`)) {
+        showSync('Actualizando...');
+        const { error } = await _supabase
+            .from('gp_templates')
+            .update({ data: state.weeklyMenu })
+            .eq('id', currentTemplateId);
+            
+        if (error) alert('Error: ' + error.message);
+        else showSync('Plantilla actualizada');
+    }
+}
+
+async function deleteTemplate() {
+    if (!currentTemplateId) return;
+    const template = state.templates.find(t => t.id == currentTemplateId);
+
+    if (confirm(`¿Estás seguro de que quieres eliminar la plantilla "${template.name}"?`)) {
+        showSync('Eliminando...');
+        const { error } = await _supabase.from('gp_templates').delete().eq('id', currentTemplateId);
+        
+        if (error) {
+            alert('Error: ' + error.message);
+        } else {
+            currentTemplateId = null;
+            showSync('Eliminado');
+        }
+    }
 }
 
 async function loadTemplate(id) {
@@ -433,12 +489,16 @@ async function loadTemplate(id) {
 
     if (confirm(`¿Quieres cargar el plan "${template.name}"? Esto sobrescribirá el plan actual.`)) {
         state.weeklyMenu = template.data;
+        currentTemplateId = id;
         await saveState('weekly_menu', state.weeklyMenu);
         renderWeek();
         renderShoppingList();
+        updateTemplateUI();
         showSync('Plan cargado');
+    } else {
+        // Reset select if cancelled
+        renderTemplates();
     }
-    document.getElementById('templateSelect').value = '';
 }
 
 async function resetInventory() {
