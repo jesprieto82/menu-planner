@@ -510,6 +510,106 @@ async function resetInventory() {
     }
 }
 
+async function shareMenu() {
+    showSync('Generando imagen...', 0);
+    
+    // Create container for rendering
+    const printContainer = document.createElement('div');
+    printContainer.style.position = 'fixed';
+    printContainer.style.left = '-9999px';
+    printContainer.style.top = '0';
+    printContainer.style.width = '600px';
+    printContainer.style.padding = '50px';
+    printContainer.style.background = '#ffffff';
+    printContainer.style.color = '#000000';
+    printContainer.style.fontFamily = "'Inter', -apple-system, sans-serif";
+
+    // Build Content
+    let hasAnyFood = false;
+    let html = `
+        <div style="text-align: center; margin-bottom: 40px;">
+            <h1 style="margin: 0; font-size: 32px; letter-spacing: -1px;">Mi Menú Semanal</h1>
+            <p style="color: #666; margin-top: 5px; font-size: 14px;">Generado por Gourmet Planner</p>
+        </div>
+    `;
+
+    days.forEach(day => {
+        let dayHasFood = false;
+        let dayHtml = `
+            <div style="margin-bottom: 30px; page-break-inside: avoid;">
+                <h2 style="font-size: 18px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 15px;">${day}</h2>
+        `;
+        
+        mealTypes.forEach(meal => {
+            const key = `${day}-${meal}`;
+            const mealData = state.weeklyMenu[key];
+            if (mealData) {
+                const firstId = typeof mealData === 'object' ? mealData.first : mealData;
+                const secondId = typeof mealData === 'object' ? mealData.second : null;
+                const firstDish = state.dishes.find(d => d.id === firstId);
+                const secondDish = state.dishes.find(d => d.id === secondId);
+
+                if (firstDish || secondDish) {
+                    dayHasFood = true;
+                    hasAnyFood = true;
+                    dayHtml += `
+                        <div style="margin-bottom: 15px; display: flex; align-items: flex-start;">
+                            <div style="min-width: 100px; color: #888; font-size: 13px; font-weight: 600; text-transform: uppercase; padding-top: 4px;">${meal}</div>
+                            <div style="flex: 1;">
+                                ${firstDish ? `<div style="font-weight: 800; font-size: 20px; line-height: 1.2; margin-bottom: 4px;">${firstDish.name}</div>` : ''}
+                                ${secondDish ? `<div style="font-weight: 800; font-size: 20px; line-height: 1.2;">${secondDish.name}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        });
+
+        dayHtml += `</div>`;
+        if (dayHasFood) html += dayHtml;
+    });
+
+    if (!hasAnyFood) {
+        alert('Agrega al menos un plato al menú antes de compartir.');
+        showSync('Cancelado');
+        return;
+    }
+
+    // Notes Section
+    html += `
+        <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px;">
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 15px; color: #444;">NOTAS</div>
+            <div style="border-bottom: 1px solid #eee; height: 35px;"></div>
+            <div style="border-bottom: 1px solid #eee; height: 35px;"></div>
+            <div style="border-bottom: 1px solid #eee; height: 35px;"></div>
+        </div>
+    `;
+
+    printContainer.innerHTML = html;
+    document.body.appendChild(printContainer);
+
+    try {
+        const canvas = await html2canvas(printContainer, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            logging: false
+        });
+        
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement('a');
+        link.download = `Menu-Semanal-${new Date().toISOString().split('T')[0]}.png`;
+        link.href = image;
+        link.click();
+        showSync('¡Imagen lista!');
+    } catch (err) {
+        console.error('Error sharing menu:', err);
+        alert('Hubo un problema al generar la imagen. Inténtalo de nuevo.');
+    } finally {
+        document.body.removeChild(printContainer);
+    }
+}
+
 async function saveState(key, value) {
     showSync('Guardando...');
     if (key === 'dishes') {
