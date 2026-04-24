@@ -262,9 +262,8 @@ h1 {
 
 /* Shopping List */
 .shopping-container {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 2rem;
+    display: block;
+    width: 100%;
 }
 
 .shopping-list-card {
