@@ -388,60 +388,93 @@ input, select {
 
     main {
         margin-left: 0;
-        margin-bottom: 80px;
-        padding: 1rem;
+        margin-bottom: 90px;
+        padding: 1.5rem 1rem;
     }
 
     header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 1rem;
+        gap: 1.2rem;
     }
 
     header .actions, header div {
         width: 100%;
-        justify-content: space-between;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
     }
 
     header input {
         max-width: none !important;
-        flex: 1;
+        width: 100%;
+        font-size: 16px; /* Evita auto-zoom en iOS */
     }
 
     h1 {
-        font-size: 1.5rem;
+        font-size: 1.8rem;
+        line-height: 1.2;
     }
 
-    /* Weekly Grid to Vertical Stack */
-    .week-grid {
-        grid-template-columns: 1fr;
+    .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
     }
 
-    .day-card {
-        min-height: auto;
+    /* Form and Inputs */
+    input, select, textarea {
+        font-size: 16px !important; /* Estándar iOS para evitar zoom */
+        padding: 12px;
     }
 
-    /* Shopping List Stack */
-    .shopping-container {
-        grid-template-columns: 1fr;
-    }
-
-    .dish-grid {
-        grid-template-columns: 1fr;
-    }
-
+    /* Modal adjustments */
     .modal {
-        width: 95%;
+        width: 92%;
         padding: 1.5rem;
+        max-height: 85vh;
+        overflow-y: auto;
     }
 
+    /* Ingredient Row Mobile Optimization */
     .ingredient-row {
-        flex-wrap: wrap;
+        display: grid !important;
+        grid-template-columns: 1fr 80px 60px 40px;
+        gap: 8px;
+        background: rgba(255,255,255,0.03);
+        padding: 10px;
+        border-radius: 12px;
+        margin-bottom: 12px !important;
+        border: 1px solid var(--border-color);
     }
 
     .ingredient-row input:first-child {
+        grid-column: span 4;
         width: 100% !important;
-        margin-bottom: 5px;
+    }
+
+    .ingredient-row input.ing-qty {
+        grid-column: 1;
+        width: 100% !important;
+    }
+
+    .ingredient-row input.ing-unit {
+        grid-column: 2 / span 2;
+        width: 100% !important;
+    }
+
+    .ingredient-row .btn-danger-icon {
+        grid-column: 4;
+        width: 100%;
+    }
+
+    /* Cards */
+    .day-card {
+        padding: 1.2rem;
+    }
+
+    .meal-slot {
+        margin-bottom: 1rem;
     }
 }
 
