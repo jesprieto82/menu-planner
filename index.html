@@ -37,8 +37,21 @@
         <section id="weekly-menu" class="section active">
             <header>
                 <h1>Plan de Comidas Semanal</h1>
-                <button class="btn btn-primary" onclick="resetWeek()">Reiniciar Semana</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" style="background: var(--glass-bg);" onclick="resetInventory()">Restablecer Lista</button>
+                    <button class="btn btn-primary" onclick="resetWeek()">Limpiar Semana</button>
+                </div>
             </header>
+            
+            <!-- Templates Control -->
+            <div class="templates-control" style="margin-bottom: 2rem; background: var(--glass-bg); padding: 1rem; border-radius: 16px; border: 1px solid var(--glass-border); display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <select id="templateSelect" onchange="if(this.value) loadTemplate(this.value)">
+                        <option value="">Cargar plan guardado...</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="saveAsTemplate()" style="flex: 0;">Guardar Plan Actual</button>
+            </div>
             <div class="week-grid" id="weekGrid">
                 <!-- Days will be injected here -->
             </div>

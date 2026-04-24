@@ -8,6 +8,7 @@ let state = {
     dishes: [],
     weeklyMenu: {},
     inventory: {},
+    templates: [],
     settings: JSON.parse(localStorage.getItem('gp_settings')) || { clientId: '', apiKey: '' }
 };
 
@@ -388,10 +389,65 @@ async function loadInitialData() {
         if (inventory) state.inventory = inventory.value;
     }
 
+    // Fetch templates
+    const { data: templates } = await _supabase.from('gp_templates').select('*').order('name');
+    state.templates = templates || [];
+
     renderWeek();
     renderDishes();
     renderShoppingList();
+    renderTemplates();
     showSync('Conectado');
+}
+
+function renderTemplates() {
+    const select = document.getElementById('templateSelect');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">Cargar plan guardado...</option>';
+    state.templates.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.innerText = t.name;
+        select.appendChild(opt);
+    });
+}
+
+async function saveAsTemplate() {
+    const name = prompt('Nombre para este plan semanal (ej: Dieta Mediterránea, Semana 1):');
+    if (!name) return;
+
+    showSync('Guardando plantilla...');
+    const { error } = await _supabase.from('gp_templates').insert([{
+        name: name,
+        data: state.weeklyMenu
+    }]);
+
+    if (error) alert('Error: ' + error.message);
+    else showSync('Plantilla guardada');
+}
+
+async function loadTemplate(id) {
+    const template = state.templates.find(t => t.id == id);
+    if (!template) return;
+
+    if (confirm(`¿Quieres cargar el plan "${template.name}"? Esto sobrescribirá el plan actual.`)) {
+        state.weeklyMenu = template.data;
+        await saveState('weekly_menu', state.weeklyMenu);
+        renderWeek();
+        renderShoppingList();
+        showSync('Plan cargado');
+    }
+    document.getElementById('templateSelect').value = '';
+}
+
+async function resetInventory() {
+    if (confirm('¿Quieres marcar TODOS los ingredientes del plan actual como "necesarios"? (Se limpiará tu despensa actual)')) {
+        state.inventory = {};
+        await saveState('inventory', state.inventory);
+        renderShoppingList();
+        showSync('Lista restablecida');
+    }
 }
 
 async function saveState(key, value) {
@@ -432,6 +488,16 @@ function setupRealtime() {
             renderWeek();
             renderShoppingList();
             showSync('Platos actualizados');
+        })
+        .subscribe();
+
+    _supabase
+        .channel('public:gp_templates')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'gp_templates' }, async () => {
+            const { data } = await _supabase.from('gp_templates').select('*').order('name');
+            state.templates = data || [];
+            renderTemplates();
+            showSync('Plantillas actualizadas');
         })
         .subscribe();
 }
