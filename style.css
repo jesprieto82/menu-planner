@@ -415,6 +415,33 @@ input, select {
         line-height: 1.2;
     }
 
+    /* Weekly Grid to Vertical Stack */
+    .week-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .templates-control {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    .templates-control > div {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    #templateActions {
+        width: 100%;
+        display: flex;
+    }
+
+    #templateActions button {
+        flex: 1;
+    }
+
     .btn {
         width: 100%;
         justify-content: center;
