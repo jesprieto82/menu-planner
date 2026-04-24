@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gourmet Planner | Tu Lista de Compra Inteligente</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google APIs -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+</head>
+<body>
+    <nav>
+        <div class="logo">Gourmet Planner</div>
+        <ul class="nav-links">
+            <li class="active" onclick="showSection('weekly-menu')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18"></path></svg>
+                <span>Plan Semanal</span>
+            </li>
+            <li onclick="showSection('dishes')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+                <span>Mis Platos</span>
+            </li>
+            <li onclick="showSection('shopping-list')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                <span>Lista de Compra</span>
+            </li>
+            <li onclick="openSettingsModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span>Configuración</span>
+            </li>
+        </ul>
+    </nav>
+
+    <main>
+        <!-- Weekly Menu Section -->
+        <section id="weekly-menu" class="section active">
+            <header>
+                <h1>Plan de Comidas Semanal</h1>
+                <button class="btn btn-primary" onclick="resetWeek()">Reiniciar Semana</button>
+            </header>
+            <div class="week-grid" id="weekGrid">
+                <!-- Days will be injected here -->
+            </div>
+        </section>
+
+        <!-- Dishes Section -->
+        <section id="dishes" class="section">
+            <header>
+                <h1>Mis Platos y Recetas</h1>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <input type="text" id="dishSearch" placeholder="Buscar plato..." oninput="renderDishes()" style="max-width: 250px;">
+                    <button class="btn btn-primary" onclick="openDishModal()">+ Nuevo Plato</button>
+                </div>
+            </header>
+            <div class="dish-grid" id="dishGrid">
+                <!-- Dishes will be injected here -->
+            </div>
+        </section>
+
+        <!-- Shopping List Section -->
+        <section id="shopping-list" class="section">
+            <header>
+                <h1>Lista de Compra</h1>
+                <div class="actions" style="display: flex; gap: 10px;">
+                    <input type="text" id="shoppingSearch" placeholder="Buscar ingrediente..." oninput="renderShoppingList()" style="max-width: 250px;">
+                    <button class="btn" style="background: var(--glass-bg);" onclick="generateShoppingList()">Actualizar</button>
+                    <button class="btn btn-primary" id="syncBtn" onclick="handleSyncClick()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Sincronizar Sheets
+                    </button>
+                </div>
+            </header>
+            <div class="shopping-container">
+                <div class="shopping-list-card">
+                    <h3>Ingredientes Necesarios</h3>
+                    <div id="shoppingItems">
+                        <!-- Items injected here -->
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <div class="card" style="background: var(--glass-bg); padding: 1.5rem; border-radius: 16px;">
+                        <h3>Estado de Despensa</h3>
+                        <p style="margin: 1rem 0; color: var(--text-dim); font-size: 0.9rem;">
+                            Marca los ingredientes que ya tienes en casa. Los que no tengas aparecerán en tu lista final de supermercado.
+                        </p>
+                        <div id="stockedSummary"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Adding/Editing Dishes -->
+    <div class="modal-overlay" id="dishModal">
+        <div class="modal">
+            <h2 id="modalTitle">Nuevo Plato</h2>
+            <form id="dishForm" style="margin-top: 1.5rem;">
+                <div class="form-group">
+                    <label>Nombre del Plato</label>
+                    <input type="text" id="dishName" required placeholder="Ej: Paella de Marisco">
+                </div>
+                <div class="form-group">
+                    <label>Ingredientes (Nombre, Cantidad, Unidad)</label>
+                    <div id="ingredientInputs">
+                        <div class="ingredient-row" style="display: flex; gap: 5px; margin-bottom: 5px;">
+                            <input type="text" placeholder="Ingrediente" class="ing-name" required>
+                            <input type="text" placeholder="Cant." style="width: 80px;" class="ing-qty">
+                            <input type="text" placeholder="Ud." style="width: 60px;" class="ing-unit">
+                        </div>
+                    </div>
+                    <button type="button" class="btn" style="background: var(--glass-bg); margin-top: 5px;" onclick="addIngredientRow()">+ Añadir Ingrediente</button>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 2rem;">
+                    <button type="button" class="btn" onclick="closeDishModal()" style="background: transparent;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Plato</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Selecting Dish for a Meal -->
+    <div class="modal-overlay" id="selectDishModal">
+        <div class="modal">
+            <h2 id="selectModalTitle">Seleccionar Plato</h2>
+            <div style="margin-top: 1rem;">
+                <input type="text" id="modalDishSearch" placeholder="Buscar por nombre..." oninput="renderSelectModalList()">
+            </div>
+            <div id="dishSelectorList" style="margin-top: 1rem; max-height: 400px; overflow-y: auto;">
+                <!-- List of dishes to select from -->
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 2rem;">
+                <button type="button" class="btn" onclick="closeSelectModal()" style="background: transparent;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Settings -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h2>Configuración Google API</h2>
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 5px;">Necesario para sincronizar con Google Sheets.</p>
+            <form id="settingsForm" style="margin-top: 1.5rem;">
+                <div class="form-group">
+                    <label>Google Client ID</label>
+                    <input type="text" id="clientId" placeholder="Tu Client ID de Google Cloud">
+                </div>
+                <div class="form-group">
+                    <label>Google API Key</label>
+                    <input type="password" id="apiKey" placeholder="Tu API Key de Google Cloud">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 2rem;">
+                    <button type="button" class="btn" onclick="closeSettingsModal()" style="background: transparent;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Configuración</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+
+    <!-- Global Sync Indicator -->
+    <div id="syncIndicator" style="position: fixed; bottom: 20px; right: 20px; background: var(--glass-bg); padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; display: none; align-items: center; gap: 8px; backdrop-filter: blur(10px); border: 1px solid var(--glass-border); z-index: 1000;">
+        <span class="sync-dot" style="width: 8px; height: 8px; background: var(--accent-primary); border-radius: 50%; animation: pulse 1.5s infinite;"></span>
+        <span id="syncText">Sincronizado</span>
+    </div>
+
+    <style>
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+    </style>
+</body>
+</html>
